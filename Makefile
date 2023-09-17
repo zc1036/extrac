@@ -19,7 +19,7 @@ endif
 LIBTCC = libtcc.a
 LIBTCC1 = libtcc1.a
 LINK_LIBTCC =
-LIBS =
+LIBS = -llua5.3
 CFLAGS += -I$(TOP)
 CFLAGS += $(CPPFLAGS)
 VPATH = $(TOPSRC)
@@ -208,7 +208,7 @@ INC-$(TR) ?= {B}/include:/usr/$(TRIPLET-$T)/include
 endif
 endif
 
-CORE_FILES = tcc.c tcctools.c libtcc.c tccpp.c tccgen.c tccdbg.c tccelf.c tccasm.c tccrun.c
+CORE_FILES = tcc.c tcctools.c libtcc.c tccpp.c tccgen.c tccdbg.c tccelf.c tccasm.c tccrun.c extrac.c++
 CORE_FILES += tcc.h config.h libtcc.h tcctok.h
 i386_FILES = $(CORE_FILES) i386-gen.c i386-link.c i386-asm.c i386-asm.h i386-tok.h
 i386-win32_FILES = $(i386_FILES) tccpe.c
@@ -231,7 +231,7 @@ riscv64_FILES = $(CORE_FILES) riscv64-gen.c riscv64-link.c riscv64-asm.c
 TCCDEFS_H$(subst yes,,$(CONFIG_predefs)) = tccdefs_.h
 
 # libtcc sources
-LIBTCC_SRC = $(filter-out tcc.c tcctools.c,$(filter %.c,$($T_FILES)))
+LIBTCC_SRC = $(filter-out tcc.c tcctools.c,$(filter %.c %.c++,$($T_FILES)))
 
 ifeq ($(ONE_SOURCE),yes)
 LIBTCC_OBJ = $(X)libtcc.o
@@ -240,7 +240,7 @@ TCC_FILES = $(X)tcc.o
 tcc.o : DEFINES += -DONE_SOURCE=0
 $(X)tcc.o $(X)libtcc.o  : $(TCCDEFS_H)
 else
-LIBTCC_OBJ = $(patsubst %.c,$(X)%.o,$(LIBTCC_SRC))
+LIBTCC_OBJ = $(patsubst %.c++,$(X)%.o,$(patsubst %.c,$(X)%.o,$(LIBTCC_SRC)))
 LIBTCC_INC = $(filter %.h %-gen.c %-link.c,$($T_FILES))
 TCC_FILES = $(X)tcc.o $(LIBTCC_OBJ)
 $(TCC_FILES) : DEFINES += -DONE_SOURCE=0
@@ -267,13 +267,16 @@ endif
 $(X)%.o : %.c $(LIBTCC_INC)
 	$S$(CC) -o $@ -c $< $(DEFINES) $(CFLAGS)
 
+$(X)%.o: %.c++ $(LIBTCC_INC)
+	$S$(CXX) -std=c++17 -o $@ -c $< $(DEFINES) $(CXXFLAGS) -I sol2/include -I /usr/include/lua5.3
+
 # additional dependencies
 $(X)tcc.o : tcctools.c
 $(X)tcc.o : DEFINES += $(DEF_GITHASH)
 
 # Host Tiny C Compiler
 tcc$(EXESUF): tcc.o $(LIBTCC)
-	$S$(CC) -o $@ $^ $(LIBS) $(LDFLAGS) $(LINK_LIBTCC)
+	$S$(CXX) -o $@ $^ $(LIBS) $(LDFLAGS) $(LINK_LIBTCC)
 
 # Cross Tiny C Compilers
 # (the TCCDEFS_H dependency is only necessary for parallel makes,
@@ -305,11 +308,11 @@ libtcc.so: LDFLAGS+=-fPIC
 
 # OSX dynamic libtcc library
 libtcc.dylib: $(LIBTCC_OBJ)
-	$S$(CC) -dynamiclib $(DYLIBVER) -install_name @rpath/$@ -o $@ $^ $(LDFLAGS) 
+	$S$(CC) -dynamiclib $(DYLIBVER) -install_name @rpath/$@ -o $@ $^ $(LDFLAGS)
 
 # OSX libtcc.dylib (without rpath/ prefix)
 libtcc.osx: $(LIBTCC_OBJ)
-	$S$(CC) -shared -install_name libtcc.dylib -o libtcc.dylib $^ $(LDFLAGS) 
+	$S$(CC) -shared -install_name libtcc.dylib -o libtcc.dylib $^ $(LDFLAGS)
 
 # windows dynamic libtcc library
 libtcc.dll : $(LIBTCC_OBJ)

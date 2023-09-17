@@ -1,6 +1,6 @@
 /*
  *  TCC - Tiny C Compiler
- * 
+ *
  *  Copyright (c) 2001-2004 Fabrice Bellard
  *
  * This library is free software; you can redistribute it and/or
@@ -272,7 +272,7 @@ static unsigned getclock_ms(void)
 #endif
 }
 
-int main(int argc0, char **argv0)
+int tcc_main(int argc0, char **argv0)
 {
     TCCState *s, *s1;
     int ret, opt, n = 0, t = 0, done;
